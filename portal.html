@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Portal SPPG — Pemesanan Bahan MBG</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f3f6f9; --card:#fff; --ink:#18242f; --muted:#64717d; --line:#e1e7ed;
+  --pri:#1c5f99; --pri-2:#e8f1f9; --pri-d:#123f66;
+  --ok:#1f7a4a; --ok-bg:#e6f2ea; --warn:#a86400; --warn-bg:#fff3de; --bad:#b3261e; --bad-bg:#fdecea;
+  --r:14px; --sh:0 1px 2px rgba(0,0,0,.04),0 2px 10px rgba(0,0,0,.05);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 'Plus Jakarta Sans',system-ui,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+.hidden{display:none!important}
+.sm-only{display:none}
+/* Login */
+#login{min-height:100vh;display:grid;place-items:center;padding:16px;background:linear-gradient(160deg,#e8f1f9,#f3f6f9 60%)}
+.lc{width:100%;max-width:380px;background:#fff;border-radius:18px;box-shadow:var(--sh);padding:26px}
+.brand{display:flex;gap:12px;align-items:center;margin-bottom:18px}
+.logo{width:44px;height:44px;flex:0 0 44px;border-radius:12px;background:var(--pri);color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px}
+.brand b{display:block;font-size:17px;line-height:1.25}.brand small{color:var(--muted)}
+/* Shell */
+header{position:sticky;top:0;z-index:20;background:var(--pri-d);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px}
+header .logo{width:36px;height:36px;flex-basis:36px;background:#fff;color:var(--pri-d);font-size:12px}
+header .t{flex:1;min-width:0}header .t b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}header .t small{opacity:.75;font-size:12px}
+nav#tabs{display:flex;gap:4px;padding:8px 16px;background:#fff;border-bottom:1px solid var(--line);overflow-x:auto;position:sticky;top:60px;z-index:19}
+nav#tabs a{padding:8px 14px;border-radius:99px;color:var(--muted);text-decoration:none;font-weight:600;font-size:14px;white-space:nowrap;cursor:pointer;position:relative}
+nav#tabs a.on{background:var(--pri-2);color:var(--pri)}
+.dot{display:inline-block;min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:var(--bad);color:#fff;font-size:11px;line-height:18px;text-align:center;margin-left:4px}
+main{max-width:980px;margin:0 auto;padding:16px 16px 110px}
+h2.pt{font-size:19px;margin:4px 0 14px}
+/* UI */
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:16px;margin-bottom:14px}
+.card h3{margin:0 0 10px;font-size:15.5px}
+.btn{border:1px solid var(--line);background:#fff;padding:10px 16px;border-radius:11px;cursor:pointer;font-weight:600;white-space:nowrap}
+.btn.pri{background:var(--pri);border-color:var(--pri);color:#fff}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn.bad{color:var(--bad);border-color:#f1c5c1}
+.btn.sm{padding:6px 12px;font-size:13px;border-radius:9px}
+.btn.block{width:100%}
+.btn:disabled{opacity:.5}
+label.f{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--muted);flex:1;min-width:150px}
+input,select,textarea{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff;width:100%}
+input:focus,select:focus,textarea:focus{outline:2px solid #bcd6ee;border-color:var(--pri)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+.mt{margin-top:12px}.muted{color:var(--muted)}.small{font-size:13px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:14px}
+.kpi{background:#fff;border-radius:var(--r);box-shadow:var(--sh);padding:14px}
+.kpi .l{font-size:12.5px;color:var(--muted)}.kpi .v{font-size:21px;font-weight:700;font-variant-numeric:tabular-nums}
+.kpi.warn .v{color:var(--warn)}.kpi.bad .v{color:var(--bad)}
+.b{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600;background:#edf1f4;color:#4b5864;white-space:nowrap}
+.b.ok{background:var(--ok-bg);color:var(--ok)}.b.warn{background:var(--warn-bg);color:var(--warn)}.b.bad{background:var(--bad-bg);color:var(--bad)}.b.pri{background:var(--pri-2);color:var(--pri)}
+.alert{padding:11px 13px;border-radius:11px;margin-bottom:10px;font-size:14px}
+.alert.warn{background:var(--warn-bg);color:#6f4300}.alert.info{background:var(--pri-2);color:var(--pri-d)}.alert.ok{background:var(--ok-bg);color:#155a36}.alert.bad{background:var(--bad-bg);color:var(--bad)}
+.list .it{display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.list .it:last-child{border-bottom:0}
+.it .m{flex:1;min-width:0}.it .m b{display:block}.it .r{text-align:right}
+.tbl{overflow:auto;border:1px solid var(--line);border-radius:11px}
+table{border-collapse:collapse;width:100%;background:#fff}
+th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{background:#f6f9fb;color:var(--muted);font-size:12px;font-weight:600}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:0}tfoot td{font-weight:700;background:#f6f9fb}
+.empty{padding:26px;text-align:center;color:var(--muted)}
+/* Katalog pemesanan */
+.kat{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:16px 0 6px}
+.prod{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.prod .m{flex:1;min-width:0}.prod .m b{display:block}.prod .m small{color:var(--muted)}
+.prod input{width:110px;text-align:right}
+.prod.on{background:linear-gradient(90deg,var(--pri-2),transparent);margin:0 -16px;padding:10px 16px}
+.cart{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);box-shadow:0 -4px 16px rgba(0,0,0,.06);padding:12px 16px calc(12px + env(safe-area-inset-bottom));z-index:30}
+.cart .in{max-width:980px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.cart .in div{flex:1}
+@media (max-width:560px){.hm{display:none}.sm-only{display:block}th,td{white-space:normal;padding:8px}.step{font-size:10.5px;padding-left:2px;padding-right:2px}.cart .btn{padding:9px 12px}.cart .in{gap:8px}#cT{font-size:16px!important}}
+/* Timeline */
+.steps{display:flex;gap:0;margin:6px 0 14px;overflow-x:auto}
+.step{flex:1;min-width:52px;text-align:center;font-size:11px;color:var(--muted);position:relative;padding-top:24px}
+.step:before{content:'';position:absolute;top:7px;left:50%;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:#d6dde3;z-index:1}
+.step:after{content:'';position:absolute;top:13px;left:-50%;width:100%;height:2px;background:#d6dde3}
+.step:first-child:after{display:none}
+.step.on{color:var(--ink);font-weight:600}.step.on:before,.step.on:after{background:var(--pri)}
+/* Modal */
+#modal{position:fixed;inset:0;background:rgba(10,20,30,.45);display:flex;align-items:flex-end;justify-content:center;z-index:50}
+.mbox{background:#fff;width:100%;max-width:720px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0}
+.mh{position:sticky;top:0;background:#fff;display:flex;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line);z-index:2}
+.mh h2{flex:1;margin:0;font-size:16.5px}
+.mb{padding:16px 18px}
+.mf{position:sticky;bottom:0;background:#fff;display:flex;gap:8px;justify-content:flex-end;padding:12px 18px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);flex-wrap:wrap}
+.x{border:0;background:none;font-size:24px;line-height:1;color:var(--muted);cursor:pointer}
+@media (min-width:720px){#modal{align-items:flex-start;padding:40px 12px}.mbox{border-radius:18px}}
+.radio{display:flex;gap:10px;flex-wrap:wrap}.radio label{flex:1;min-width:140px;border:1px solid var(--line);border-radius:11px;padding:10px 12px;display:flex;gap:8px;align-items:center;cursor:pointer}
+.radio input{width:auto}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:96px;z-index:80;display:flex;flex-direction:column;gap:6px;align-items:center}
+.tt{background:#18242f;color:#fff;padding:10px 16px;border-radius:11px;max-width:90vw}.tt.bad{background:var(--bad)}
+#loading{position:fixed;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--pri),#9cc8ee,var(--pri));background-size:200% 100%;animation:ld 1s linear infinite;z-index:90}
+@keyframes ld{to{background-position:-200% 0}}
+.sum{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:4px 0}.sum .b{white-space:normal;text-align:right}.sum.tot{border-top:1px solid var(--line);margin-top:6px;padding-top:8px;font-weight:700}
+</style>
+</head>
+<body>
+<div id="loading" class="hidden"></div>
+
+<section id="login">
+  <form class="lc" id="loginForm">
+    <div class="brand"><div class="logo">SPPG</div><div><b>Portal SPPG</b><small id="lgKop">Pemesanan bahan pangan MBG</small></div></div>
+    <label class="f">Kode SPPG<input name="kode" autocomplete="username" placeholder="mis. SPPG-BMY1" required style="text-transform:uppercase"></label>
+    <label class="f mt">PIN (6 digit)<input name="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password" required></label>
+    <button class="btn pri block mt">Masuk</button>
+    <p class="muted small" id="loginMsg" style="min-height:20px"></p>
+    <p class="muted small" style="margin:0">Kode & PIN diberikan oleh koperasi pemasok. Lupa PIN? Hubungi admin koperasi.</p>
+  </form>
+</section>
+
+<div id="app" class="hidden">
+  <header>
+    <div class="logo">SPPG</div>
+    <div class="t"><b id="hNama">SPPG</b><small id="hKop">Koperasi</small></div>
+    <button class="btn sm" id="logoutBtn" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.35)">Keluar</button>
+  </header>
+  <nav id="tabs"></nav>
+  <main id="page"></main>
+</div>
+
+<div id="modal" class="hidden"></div>
+<div id="toast"></div>
+
+<script>
+/* ======================== KONFIGURASI ======================== */
+const API_URL = 'https://script.google.com/macros/s/AKfycbzRAJ5PdiTgmOJvjauyx8lOSZ3Xv2sB9ShLV0J5v5A_q35ywXtTyIV9frfjMFdPP0g8RQ/exec';   // URL Web App Apps Script SIKOP-MBG (…/exec) — sama dengan index.html
+
+/* ======================== UTIL ======================== */
+const P = { token: null, user: null, sppg: {}, koperasi: {}, katalog: [], min_hari: 1, draft: {} };
+const $ = s => document.querySelector(s);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const num = v => { const x = Number(String(v ?? '').replace(',', '.')); return isFinite(x) ? x : 0; };
+const rp = v => 'Rp' + Math.round(num(v)).toLocaleString('id-ID');
+const qf = v => num(v).toLocaleString('id-ID', { maximumFractionDigits: 2 });
+const isoDate = d => { const x = new Date(d); x.setMinutes(x.getMinutes() - x.getTimezoneOffset()); return x.toISOString().slice(0, 10); };
+const today = () => isoDate(new Date());
+const addDays = (s, k) => { const d = new Date(s + 'T00:00:00'); d.setDate(d.getDate() + k); return isoDate(d); };
+const HARI = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+const tglID = s => { if (!s) return '-'; const [y, m, d] = String(s).slice(0, 10).split('-'); return `${d}/${m}/${y}`; };
+const tglHari = s => s ? `${HARI[new Date(s + 'T00:00:00').getDay()]}, ${tglID(s)}` : '-';
+const STATUS_TXT = { Baru: 'Menunggu diproses', Dialokasikan: 'Disiapkan pemasok', Diterima: 'Lolos QC gudang', Dikirim: 'Dalam pengiriman', Ditagih: 'Ditagihkan', Lunas: 'Selesai & lunas', Batal: 'Dibatalkan' };
+const STATUS_CLS = { Baru: 'pri', Dialokasikan: 'pri', Diterima: 'warn', Dikirim: 'warn', Ditagih: 'warn', Lunas: 'ok', Batal: 'bad' };
+const badge = s => `<span class="b ${STATUS_CLS[s] || ''}">${esc(STATUS_TXT[s] || s)}</span>`;
+
+function toast(msg, bad) { const t = document.createElement('div'); t.className = 'tt' + (bad ? ' bad' : ''); t.textContent = msg; $('#toast').appendChild(t); setTimeout(() => t.remove(), bad ? 6000 : 3000); }
+let ldN = 0; const loading = on => { ldN += on ? 1 : -1; $('#loading').classList.toggle('hidden', ldN <= 0); };
+async function api(action, data = {}) {
+  loading(true);
+  try {
+    const r = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action, token: P.token, data }) });
+    const j = await r.json();
+    if (j.auth === false) { logout(true); throw new Error(j.error); }
+    if (!j.ok) throw new Error(j.error || 'Terjadi kesalahan');
+    return j.data;
+  } finally { loading(false); }
+}
+async function run(fn, ok) { try { const r = await fn(); if (ok) toast(ok); return r; } catch (e) { toast(e.message, true); throw e; } }
+function ss(k, v) { try { if (v === undefined) return sessionStorage.getItem('portal_' + k); if (v === null) sessionStorage.removeItem('portal_' + k); else sessionStorage.setItem('portal_' + k, v); } catch (_) { return null; } }
+
+function modal(title, body, buttons = []) {
+  const m = $('#modal');
+  m.innerHTML = `<div class="mbox"><div class="mh"><h2>${esc(title)}</h2><button class="x" data-x>×</button></div><div class="mb">${body}</div>
+  ${buttons.length ? `<div class="mf">${buttons.map((b, i) => `<button class="btn ${b.cls || ''}" data-b="${i}">${esc(b.label)}</button>`).join('')}</div>` : ''}</div>`;
+  m.classList.remove('hidden'); document.body.style.overflow = 'hidden';
+  m.querySelector('[data-x]').onclick = closeModal;
+  m.onclick = e => { if (e.target === m) closeModal(); };
+  buttons.forEach((b, i) => { const el = m.querySelector(`[data-b="${i}"]`); el.onclick = async () => {
+    if (!b.onClick) return closeModal();
+    el.disabled = true;
+    try { const keep = await b.onClick(m); if (keep !== true) closeModal(); } catch (e) {} finally { el.disabled = false; }
+  }; });
+  return m;
+}
+function closeModal() { $('#modal').classList.add('hidden'); $('#modal').innerHTML = ''; document.body.style.overflow = ''; }
+const fd = root => { const o = {}; root.querySelectorAll('[name]').forEach(el => { if (el.type === 'radio') { if (el.checked) o[el.name] = el.value; } else o[el.name] = el.value; }); return o; };
+
+function printDoc(title, html) {
+  const w = window.open('', '_blank');
+  if (!w) return toast('Izinkan pop-up untuk mencetak.', true);
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>
+  body{font:13px/1.45 Arial,sans-serif;color:#111;padding:24px;max-width:820px;margin:auto}h2{margin:0}
+  table{border-collapse:collapse;width:100%;margin:12px 0}th,td{border:1px solid #999;padding:6px 8px;text-align:left}.n{text-align:right}
+  .hd{display:flex;justify-content:space-between;border-bottom:2px solid #111;padding-bottom:8px;margin-bottom:12px}
+  .sig{display:flex;justify-content:space-between;margin-top:40px}.sig div{text-align:center;width:40%}.sig p{margin-top:60px;border-top:1px solid #111;padding-top:4px}
+  </style></head><body><div class="hd"><div><h2>${esc(P.koperasi.nama)}</h2><div>${esc(P.koperasi.alamat)}</div></div><div style="text-align:right"><h2>${esc(title)}</h2><div>${esc(P.sppg.nama)}</div></div></div>
+  ${html}<script>window.onload=()=>window.print()<\/script></body></html>`);
+  w.document.close();
+}
+
+/* ======================== AUTH ======================== */
+$('#loginForm').onsubmit = async e => {
+  e.preventDefault();
+  const f = fd(e.target); f.kode = f.kode.trim().toUpperCase();
+  $('#loginMsg').textContent = 'Memeriksa…';
+  try { const r = await api('portalLogin', f); P.token = r.token; ss('token', r.token); await boot(); }
+  catch (err) { $('#loginMsg').textContent = err.message; }
+};
+function logout(silent) {
+  P.token = null; ss('token', null);
+  $('#app').classList.add('hidden'); $('#login').classList.remove('hidden');
+  $('#loginMsg').textContent = silent ? 'Sesi berakhir, silakan masuk lagi.' : '';
+}
+$('#logoutBtn').onclick = () => logout();
+
+async function boot() {
+  const b = await api('portalBootstrap');
+  Object.assign(P, { user: b.user, sppg: b.sppg, koperasi: b.koperasi, katalog: b.katalog, min_hari: b.min_hari });
+  $('#hNama').textContent = P.sppg.nama; $('#hKop').textContent = 'Pemasok: ' + P.koperasi.nama;
+  $('#login').classList.add('hidden'); $('#app').classList.remove('hidden');
+  try { P.draft = JSON.parse(ss('draft') || '{}'); } catch (_) { P.draft = {}; }
+  buildTabs(); go(location.hash.slice(1) || 'beranda');
+}
+
+/* ======================== NAV ======================== */
+const TABS = [['beranda', 'Beranda'], ['pesan', 'Pesan Bahan'], ['pesanan', 'Pesanan Saya'], ['terima', 'Terima Barang'], ['tagihan', 'Tagihan'], ['pemasok', 'Sebaran Pemasok'], ['akun', 'Akun']];
+function buildTabs(badges = {}) {
+  $('#tabs').innerHTML = TABS.map(([id, l]) => `<a data-t="${id}">${l}${badges[id] ? `<span class="dot">${badges[id]}</span>` : ''}</a>`).join('');
+  $('#tabs').querySelectorAll('a').forEach(a => a.onclick = () => go(a.dataset.t));
+  markTab();
+}
+function markTab() { const id = location.hash.slice(1); $('#tabs').querySelectorAll('a').forEach(a => a.classList.toggle('on', a.dataset.t === id)); }
+async function go(id) {
+  if (!V[id]) id = 'beranda';
+  location.hash = id; markTab();
+  $('#page').oninput = null;
+  $('#page').innerHTML = '<div class="empty">Memuat…</div>';
+  window.scrollTo(0, 0);
+  try { await V[id](); } catch (e) { $('#page').innerHTML = `<div class="alert bad">${esc(e.message)}</div>`; }
+}
+window.addEventListener('hashchange', () => { if (P.token && P.user) { const on = $('#tabs a.on'); const id = location.hash.slice(1); if (!on || on.dataset.t !== id) go(id); } });
+const V = {};
+
+/* ======================== BERANDA ======================== */
+V.beranda = async () => {
+  const [po, inv] = await Promise.all([api('portalListPO'), api('portalInvoice')]);
+  const aktif = po.filter(p => !['Lunas', 'Batal'].includes(p.status));
+  const sj = po.flatMap(p => p.sj_menunggu.map(s => ({ ...s, po: p })));
+  const belum = inv.filter(i => i.status !== 'Lunas');
+  const lewat = belum.filter(i => i.lewat_tempo);
+  const besok = po.filter(p => p.status !== 'Batal' && p.tgl_kirim >= today() && p.tgl_kirim <= addDays(today(), 2));
+  buildTabs({ terima: sj.length || 0 });
+  $('#page').innerHTML = `
+  <h2 class="pt">Selamat datang, ${esc(P.sppg.pic || P.sppg.nama)}</h2>
+  ${sj.length ? `<div class="alert warn"><b>${sj.length} pengiriman</b> menunggu konfirmasi penerimaan. <a href="#terima">Konfirmasi sekarang →</a></div>` : ''}
+  ${lewat.length ? `<div class="alert bad">${lewat.length} tagihan lewat jatuh tempo, total ${rp(lewat.reduce((s, i) => s + i.sisa, 0))}.</div>` : ''}
+  <div class="kpis">
+    <div class="kpi"><div class="l">Pesanan aktif</div><div class="v">${aktif.length}</div></div>
+    <div class="kpi ${sj.length ? 'warn' : ''}"><div class="l">Menunggu konfirmasi terima</div><div class="v">${sj.length}</div></div>
+    <div class="kpi ${lewat.length ? 'bad' : ''}"><div class="l">Tagihan belum lunas</div><div class="v">${rp(belum.reduce((s, i) => s + i.sisa, 0))}</div></div>
+  </div>
+  <div class="card"><div class="row" style="align-items:center"><h3 style="flex:1;margin:0">Pengiriman 3 hari ke depan</h3><button class="btn pri sm" onclick="go('pesan')">+ Pesan bahan</button></div>
+  <div class="list mt">${besok.length ? besok.sort((a, b) => a.tgl_kirim > b.tgl_kirim ? 1 : -1).map(poRow).join('') : '<div class="empty">Belum ada pesanan untuk 3 hari ke depan.</div>'}</div></div>
+  <div class="card"><h3>Pesanan terbaru</h3><div class="list">${po.slice(0, 5).map(poRow).join('') || '<div class="empty">Belum ada pesanan.</div>'}</div></div>`;
+  bindPoRows();
+};
+const poRow = p => `<div class="it" data-po="${p.id}"><div class="m"><b>${esc(p.no_po)}</b><span class="small muted">Kirim ${tglHari(p.tgl_kirim)} · ${p.jml_item} item${p.ref_eksternal ? ' · Ref ' + esc(p.ref_eksternal) : ''}</span></div>
+  <div class="r"><div style="font-weight:700">${rp(p.total)}</div>${badge(p.status)}</div></div>`;
+const bindPoRows = () => $('#page').querySelectorAll('[data-po]').forEach(el => el.onclick = () => poDetail(el.dataset.po));
+
+/* ======================== PESAN BAHAN ======================== */
+V.pesan = async () => {
+  const minTgl = addDays(today(), P.min_hari);
+  const d = P.draft;
+  const kats = [...new Set(P.katalog.map(k => k.kategori || 'Lainnya'))];
+  $('#page').innerHTML = `
+  <h2 class="pt">Pesan bahan</h2>
+  <div class="card">
+    <div class="row"><label class="f">Tanggal kirim ke dapur<input type="date" id="pTgl" min="${minTgl}" value="${d.tgl_kirim && d.tgl_kirim >= minTgl ? d.tgl_kirim : minTgl}"></label>
+    <label class="f">No. referensi (opsional)<input id="pRef" placeholder="No. pesanan BGN / internal" value="${esc(d.ref || '')}"></label></div>
+    <label class="f mt">Menu / catatan untuk koperasi<input id="pCat" placeholder="mis. Menu Senin: nasi, ayam goreng, sayur bening, pisang" value="${esc(d.catatan || '')}"></label>
+    <p class="small muted" style="margin:8px 0 0">Pesanan paling lambat H-${P.min_hari}. Harga mengikuti katalog koperasi yang berlaku.</p>
+  </div>
+  <div class="card"><div class="row"><label class="f">Cari bahan<input id="pCari" placeholder="beras, telur, ayam…"></label></div>
+    <div id="katalog">${kats.map(kt => `<div class="kat" data-kat>${esc(kt)}</div>` + P.katalog.filter(k => (k.kategori || 'Lainnya') === kt).map(k => `
+      <div class="prod ${num(d.items?.[k.id]) > 0 ? 'on' : ''}" data-k="${k.id}" data-nm="${esc((k.nama + ' ' + k.kode).toLowerCase())}">
+        <div class="m"><b>${esc(k.nama)}</b><small>${rp(k.harga)} / ${esc(k.satuan)}</small></div>
+        <input type="number" inputmode="decimal" min="0" step="0.5" placeholder="0" value="${num(d.items?.[k.id]) || ''}"><span class="small muted" style="width:42px">${esc(k.satuan)}</span>
+      </div>`).join('')).join('') || '<div class="empty">Katalog belum tersedia. Hubungi koperasi.</div>'}</div>
+  </div>
+  <div class="cart"><div class="in"><div><span class="small muted" id="cN">0 item</span><div style="font-weight:700;font-size:18px" id="cT">Rp0</div></div>
+    <button class="btn" id="cClr" title="Kosongkan semua jumlah">Hapus</button><button class="btn pri" id="cGo">Periksa</button></div></div>`;
+  const save = () => {
+    const items = {};
+    $('#page').querySelectorAll('.prod').forEach(el => { const q = num(el.querySelector('input').value); if (q > 0) items[el.dataset.k] = q; el.classList.toggle('on', q > 0); });
+    P.draft = { tgl_kirim: $('#pTgl').value, ref: $('#pRef').value, catatan: $('#pCat').value, items };
+    ss('draft', JSON.stringify(P.draft));
+    const n = Object.keys(items).length, t = Object.entries(items).reduce((s, [id, q]) => s + q * (P.katalog.find(k => k.id === id) || {}).harga, 0);
+    $('#cN').textContent = `${n} item`; $('#cT').textContent = rp(t);
+  };
+  $('#page').oninput = e => { if (e.target.id === 'pCari') { const q = e.target.value.toLowerCase(); $('#page').querySelectorAll('.prod').forEach(el => el.classList.toggle('hidden', q && !el.dataset.nm.includes(q))); return; } save(); };
+  $('#cClr').onclick = () => { if (!confirm('Kosongkan semua jumlah?')) return; $('#page').querySelectorAll('.prod input').forEach(i => i.value = ''); save(); };
+  $('#cGo').onclick = () => confirmOrder();
+  save();
+};
+function confirmOrder() {
+  const d = P.draft, items = Object.entries(d.items || {}).map(([id, q]) => ({ k: P.katalog.find(x => x.id === id), q })).filter(x => x.k);
+  if (!items.length) return toast('Isi jumlah minimal satu bahan.', true);
+  if (!d.tgl_kirim) return toast('Pilih tanggal kirim.', true);
+  const total = items.reduce((s, x) => s + x.q * x.k.harga, 0);
+  modal('Periksa pesanan', `
+    <div class="sum"><span>Kirim ke</span><b>${esc(P.sppg.nama)}</b></div><div class="sum"><span>Tanggal kirim</span><b>${tglHari(d.tgl_kirim)}</b></div>
+    ${d.ref ? `<div class="sum"><span>No. referensi</span><b>${esc(d.ref)}</b></div>` : ''}${d.catatan ? `<p class="small muted">${esc(d.catatan)}</p>` : ''}
+    <div class="tbl mt"><table><thead><tr><th>Bahan</th><th class="n">Jumlah</th><th class="n">Harga</th><th class="n">Subtotal</th></tr></thead><tbody>
+    ${items.map(x => `<tr><td>${esc(x.k.nama)}</td><td class="n">${qf(x.q)} ${esc(x.k.satuan)}</td><td class="n">${rp(x.k.harga)}</td><td class="n">${rp(x.q * x.k.harga)}</td></tr>`).join('')}
+    </tbody><tfoot><tr><td colspan="3">Perkiraan total</td><td class="n">${rp(total)}</td></tr></tfoot></table></div>
+    <p class="small muted">Tagihan akhir dihitung dari jumlah yang benar-benar dikirim & lolos QC.</p>`,
+  [{ label: 'Ubah' }, { label: 'Kirim pesanan', cls: 'pri', onClick: async () => {
+    const r = await run(() => api('portalCreatePO', { tgl_kirim: d.tgl_kirim, ref_eksternal: d.ref, catatan: d.catatan, items: items.map(x => ({ komoditas_id: x.k.id, qty: x.q })) }));
+    P.draft = {}; ss('draft', null);
+    closeModal();
+    modal('Pesanan terkirim', `<div class="alert ok">Pesanan <b>${esc(r.no_po)}</b> senilai ${rp(r.total)} sudah diterima koperasi.</div>
+      <p>Koperasi akan membagi pesanan ke anggota pemasok. Status akan dikirim lewat WhatsApp dan bisa dipantau di <b>Pesanan Saya</b>.</p>`,
+      [{ label: 'Lihat pesanan', cls: 'pri', onClick: () => { go('pesanan'); setTimeout(() => poDetail(r.id), 400); } }]);
+    return true;
+  } }]);
+}
+
+/* ======================== PESANAN SAYA ======================== */
+V.pesanan = async () => {
+  const st = ss('fst') || 'aktif';
+  const po = await api('portalListPO');
+  const f = { aktif: p => !['Lunas', 'Batal'].includes(p.status), selesai: p => p.status === 'Lunas', batal: p => p.status === 'Batal', semua: () => true }[st] || (() => true);
+  const rows = po.filter(f);
+  $('#page').innerHTML = `<h2 class="pt">Pesanan saya</h2>
+  <div class="card"><div class="row" style="align-items:center"><select id="fSt" style="max-width:200px">${[['aktif', 'Sedang berjalan'], ['selesai', 'Selesai'], ['batal', 'Dibatalkan'], ['semua', 'Semua']].map(([v, l]) => `<option value="${v}" ${v === st ? 'selected' : ''}>${l}</option>`).join('')}</select>
+  <div style="flex:1"></div><button class="btn pri" onclick="go('pesan')">+ Pesan bahan</button></div>
+  <div class="list mt">${rows.map(poRow).join('') || '<div class="empty">Tidak ada pesanan.</div>'}</div></div>`;
+  $('#fSt').onchange = e => { ss('fst', e.target.value); V.pesanan(); };
+  bindPoRows();
+};
+
+async function poDetail(id) {
+  const d = await run(() => api('portalGetPO', { id }));
+  const p = d.po, flow = ['Baru', 'Dialokasikan', 'Diterima', 'Dikirim', 'Ditagih', 'Lunas'], idx = flow.indexOf(p.status);
+  const lbl = { Baru: 'Masuk', Dialokasikan: 'Disiapkan', Diterima: 'Lolos QC', Dikirim: 'Dikirim', Ditagih: 'Ditagih', Lunas: 'Lunas' };
+  const sjWait = d.pengiriman.filter(s => s.status === 'Dalam Perjalanan');
+  const showSiap = d.items.some(i => i.qty_siap !== null);
+  const body = `
+    ${p.status === 'Batal' ? `<div class="alert bad">Pesanan dibatalkan. ${esc(p.catatan || '')}</div>` : `<div class="steps">${flow.map((s, i) => `<div class="step ${i <= idx ? 'on' : ''}">${lbl[s]}</div>`).join('')}</div>`}
+    <div class="sum"><span>Tanggal kirim</span><b>${tglHari(p.tgl_kirim)}</b></div>
+    <div class="sum"><span>Dipesan</span><span>${tglID(p.tgl)} · via ${esc(p.sumber)}</span></div>
+    ${p.ref_eksternal ? `<div class="sum"><span>No. referensi</span><b>${esc(p.ref_eksternal)}</b></div>` : ''}
+    ${p.catatan && p.status !== 'Batal' ? `<p class="small muted">${esc(p.catatan)}</p>` : ''}
+    <h3 class="mt">Rincian bahan</h3>
+    <div class="tbl"><table><thead><tr><th>Bahan</th><th class="n">Dipesan</th>${showSiap ? '<th class="n">Siap kirim</th>' : ''}<th class="n hm">Harga</th><th class="n">Subtotal</th><th class="n hm">Pemasok</th></tr></thead><tbody>
+    ${d.items.map(i => `<tr><td>${esc(i.komoditas)}</td><td class="n">${qf(i.qty)} ${esc(i.satuan)}</td>
+      ${showSiap ? `<td class="n">${qf(i.qty_siap)}${i.qty_siap < i.qty ? ' <span class="b warn">kurang</span>' : ''}</td>` : ''}
+      <td class="n hm">${rp(i.harga)}</td><td class="n">${rp(i.subtotal)}</td><td class="n hm" title="${esc(i.desa_asal.join(', '))}">${i.jml_pemasok || '-'}</td></tr>`).join('')}
+    </tbody><tfoot><tr><td colspan="${showSiap ? 3 : 2}">Nilai pesanan</td><td class="n hm"></td><td class="n">${rp(p.total)}</td><td class="hm"></td></tr></tfoot></table></div>
+    ${d.items.some(i => i.desa_asal.length) ? `<p class="small muted">Asal pemasok: ${esc([...new Set(d.items.flatMap(i => i.desa_asal))].join(', '))}</p>` : ''}
+    ${d.pengiriman.length ? `<h3 class="mt">Pengiriman</h3>` + d.pengiriman.map(s => `<div class="sum"><span>${esc(s.no_sj)} · ${tglID(s.tgl)} · ${esc(s.driver || '-')} ${esc(s.kendaraan || '')}</span>
+      ${s.status === 'Diterima SPPG' ? `<span class="b ${s.kondisi === 'Ada selisih' ? 'warn' : 'ok'}">Diterima ${esc(s.penerima)} (${esc(s.kondisi || 'Sesuai')})</span>` : '<span class="b warn">Dalam perjalanan</span>'}</div>`).join('') : ''}
+    ${d.invoice.length ? `<h3 class="mt">Tagihan</h3>` + d.invoice.map(i => `<div class="sum"><span>${esc(i.no_inv)} · jatuh tempo ${tglID(i.jatuh_tempo)}</span><span>${rp(i.total)} <span class="b ${i.status === 'Lunas' ? 'ok' : i.lewat_tempo ? 'bad' : 'warn'}">${esc(i.status)}</span></span></div>`).join('') : ''}`;
+  const btns = [{ label: 'Tutup' }, { label: 'Pesan lagi', onClick: () => { P.draft = { items: Object.fromEntries(d.items.filter(i => P.katalog.some(k => k.id === i.komoditas_id)).map(i => [i.komoditas_id, i.qty])), catatan: '' }; ss('draft', JSON.stringify(P.draft)); go('pesan'); } },
+    { label: 'Cetak', onClick: () => { printPO(d); return true; } }];
+  if (p.status === 'Baru') btns.splice(1, 0, { label: 'Batalkan', cls: 'bad', onClick: async () => {
+    const alasan = prompt('Alasan pembatalan?'); if (alasan === null) return true;
+    await run(() => api('portalBatalPO', { id: p.id, alasan }), 'Pesanan dibatalkan'); go(location.hash.slice(1));
+  } });
+  sjWait.forEach(s => btns.push({ label: 'Konfirmasi terima ' + s.no_sj, cls: 'ok', onClick: () => { bastForm({ ...s, po: p }); return true; } }));
+  modal(`Pesanan ${p.no_po}`, body, btns);
+}
+function printPO(d) {
+  const p = d.po;
+  printDoc('PESANAN ' + p.no_po, `<p>Tanggal kirim: <b>${tglHari(p.tgl_kirim)}</b>${p.ref_eksternal ? '<br>No. referensi: ' + esc(p.ref_eksternal) : ''}<br>Status: ${esc(STATUS_TXT[p.status] || p.status)}</p>
+  <table><tr><th>No</th><th>Bahan</th><th class="n">Jumlah</th><th>Satuan</th><th class="n">Harga</th><th class="n">Subtotal</th></tr>
+  ${d.items.map((i, k) => `<tr><td>${k + 1}</td><td>${esc(i.komoditas)}</td><td class="n">${qf(i.qty)}</td><td>${esc(i.satuan)}</td><td class="n">${rp(i.harga)}</td><td class="n">${rp(i.subtotal)}</td></tr>`).join('')}
+  <tr><th colspan="5">Total</th><th class="n">${rp(p.total)}</th></tr></table><p>${esc(p.catatan || '')}</p>
+  <div class="sig"><div>Pemesan (SPPG)<p>${esc(P.sppg.pic || '')}</p></div><div>Koperasi<p>&nbsp;</p></div></div>`);
+}
+
+/* ======================== TERIMA BARANG ======================== */
+V.terima = async () => {
+  const po = await api('portalListPO');
+  const sj = po.flatMap(p => p.sj_menunggu.map(s => ({ ...s, po: p })));
+  buildTabs({ terima: sj.length || 0 });
+  $('#page').innerHTML = `<h2 class="pt">Terima barang</h2>
+  <div class="alert info">Konfirmasi setelah barang tiba di dapur dan sudah dicek. Bila jumlah kurang atau ada yang rusak, pilih <b>Ada selisih</b> dan jelaskan.</div>
+  <div class="card"><div class="list">${sj.map(s => `<div class="it" data-sj="${s.id}"><div class="m"><b>${esc(s.no_sj)}</b><span class="small muted">${esc(s.po.no_po)} · dikirim ${tglID(s.tgl)} · ${esc(s.driver || '-')} ${esc(s.kendaraan || '')}</span></div>
+    <button class="btn ok sm">Konfirmasi</button></div>`).join('') || '<div class="empty">Tidak ada pengiriman yang menunggu konfirmasi.</div>'}</div></div>`;
+  $('#page').querySelectorAll('[data-sj]').forEach(el => el.onclick = () => bastForm(sj.find(x => x.id === el.dataset.sj)));
+};
+async function bastForm(s) {
+  const d = await run(() => api('portalGetPO', { id: s.po.id }));
+  const m = modal(`Konfirmasi terima ${s.no_sj}`, `
+    <p class="small muted" style="margin-top:0">Pesanan ${esc(d.po.no_po)} · kirim ${tglHari(d.po.tgl_kirim)}</p>
+    <div class="tbl"><table><thead><tr><th>Bahan</th><th class="n">Dikirim</th></tr></thead><tbody>
+    ${d.items.map(i => `<tr><td>${esc(i.komoditas)}</td><td class="n">${qf(i.qty_siap ?? i.qty)} ${esc(i.satuan)}</td></tr>`).join('')}</tbody></table></div>
+    <label class="f mt">Nama penerima di dapur<input name="penerima" value="${esc(P.sppg.pic || '')}"></label>
+    <div class="mt small muted">Kondisi barang</div>
+    <div class="radio mt"><label><input type="radio" name="kondisi" value="Sesuai" checked> Sesuai surat jalan</label><label><input type="radio" name="kondisi" value="Ada selisih"> Ada selisih / rusak</label></div>
+    <label class="f mt">Catatan<textarea name="catatan" rows="3" placeholder="mis. Telur pecah 2 kg, bayam layu 10 ikat"></textarea></label>`,
+  [{ label: 'Batal' }, { label: 'Simpan konfirmasi', cls: 'ok', onClick: async mm => {
+    await run(() => api('portalBAST', { sj_id: s.id, ...fd(mm) }), 'Penerimaan terkonfirmasi');
+    go(location.hash.slice(1));
+  } }]);
+}
+
+/* ======================== TAGIHAN ======================== */
+V.tagihan = async () => {
+  const inv = await api('portalInvoice');
+  const belum = inv.filter(i => i.status !== 'Lunas');
+  $('#page').innerHTML = `<h2 class="pt">Tagihan</h2>
+  ${P.koperasi.rekening ? `<div class="alert info">Pembayaran ke: <b>${esc(P.koperasi.rekening)}</b>. Cantumkan nomor invoice di berita transfer.</div>` : ''}
+  <div class="kpis"><div class="kpi"><div class="l">Belum dibayar</div><div class="v">${rp(belum.reduce((s, i) => s + i.sisa, 0))}</div></div>
+  <div class="kpi ${belum.some(i => i.lewat_tempo) ? 'bad' : ''}"><div class="l">Lewat jatuh tempo</div><div class="v">${rp(belum.filter(i => i.lewat_tempo).reduce((s, i) => s + i.sisa, 0))}</div></div></div>
+  <div class="card"><div class="list">${inv.map(i => `<div class="it" data-inv="${i.id}"><div class="m"><b>${esc(i.no_inv)}</b><span class="small muted">${esc(i.no_po)} · ${tglID(i.tgl)} · jatuh tempo ${tglID(i.jatuh_tempo)}</span></div>
+    <div class="r"><div style="font-weight:700">${rp(i.total)}</div><span class="b ${i.status === 'Lunas' ? 'ok' : i.lewat_tempo ? 'bad' : 'warn'}">${i.status === 'Lunas' ? 'Lunas' : (i.lewat_tempo ? 'Lewat tempo · ' : 'Sisa ') + rp(i.sisa)}</span></div></div>`).join('') || '<div class="empty">Belum ada tagihan.</div>'}</div></div>`;
+  $('#page').querySelectorAll('[data-inv]').forEach(el => el.onclick = () => invDetail(inv.find(x => x.id === el.dataset.inv)));
+};
+function invDetail(i) {
+  const tbl = `<table><tr><th>No</th><th>Bahan</th><th class="n">Jumlah</th><th>Satuan</th><th class="n">Harga</th><th class="n">Subtotal</th></tr>
+    ${i.detail.map((x, k) => `<tr><td>${k + 1}</td><td>${esc(x.komoditas)}</td><td class="n">${qf(x.qty)}</td><td>${esc(x.satuan)}</td><td class="n">${rp(x.harga)}</td><td class="n">${rp(x.subtotal)}</td></tr>`).join('')}
+    <tr><th colspan="5">Total</th><th class="n">${rp(i.total)}</th></tr><tr><td colspan="5">Sudah dibayar</td><td class="n">${rp(i.dibayar)}</td></tr><tr><th colspan="5">Sisa</th><th class="n">${rp(i.sisa)}</th></tr></table>`;
+  modal(`Tagihan ${i.no_inv}`, `<div class="sum"><span>Pesanan</span><b>${esc(i.no_po)}</b></div><div class="sum"><span>Tanggal / jatuh tempo</span><span>${tglID(i.tgl)} / ${tglID(i.jatuh_tempo)}</span></div>
+    <div class="tbl mt">${tbl}</div>
+    ${i.pembayaran.length ? `<h3 class="mt">Pembayaran tercatat</h3>` + i.pembayaran.map(b => `<div class="sum"><span>${tglID(b.tgl)} · ${esc(b.metode)} ${esc(b.ref || '')}</span><b>${rp(b.jumlah)}</b></div>`).join('') : ''}
+    ${i.status !== 'Lunas' && P.koperasi.rekening ? `<div class="alert info mt">Transfer ke ${esc(P.koperasi.rekening)} · berita: ${esc(i.no_inv)}</div>` : ''}`,
+  [{ label: 'Tutup' }, { label: 'Cetak / simpan PDF', cls: 'pri', onClick: () => { printDoc('INVOICE ' + i.no_inv, `<p>Kepada: <b>${esc(P.sppg.nama)}</b><br>${esc(P.sppg.alamat || '')}<br>Pesanan: ${esc(i.no_po)} · Tanggal: ${tglID(i.tgl)} · Jatuh tempo: ${tglID(i.jatuh_tempo)}</p>${tbl}
+    ${P.koperasi.rekening ? `<p>Pembayaran ke: <b>${esc(P.koperasi.rekening)}</b></p>` : ''}<div class="sig"><div>Penerima<p>&nbsp;</p></div><div>Bendahara Koperasi<p>&nbsp;</p></div></div>`); return true; } }]);
+}
+
+/* ======================== SEBARAN PEMASOK ======================== */
+V.pemasok = async () => {
+  const dari = ss('pdari') || today().slice(0, 8) + '01', sampai = ss('psampai') || today();
+  const d = await api('portalSebaran', { dari, sampai });
+  const target = 15, okT = d.total_pemasok >= target;
+  $('#page').innerHTML = `<h2 class="pt">Sebaran pemasok</h2>
+  <div class="card"><div class="row"><label class="f">Dari<input type="date" id="sD" value="${dari}"></label><label class="f">Sampai<input type="date" id="sS" value="${sampai}"></label>
+  <button class="btn" id="sGo">Tampilkan</button><button class="btn" id="sPr">Cetak</button></div></div>
+  <div class="kpis"><div class="kpi ${okT ? '' : 'warn'}"><div class="l">Pemasok berbeda</div><div class="v">${d.total_pemasok}</div><div class="small muted">${okT ? 'memenuhi' : 'di bawah'} acuan min. ${target} pemasok</div></div>
+  <div class="kpi"><div class="l">Desa asal</div><div class="v">${d.total_desa}</div></div>
+  <div class="kpi"><div class="l">Jenis pemasok</div><div class="small" style="margin-top:4px">${Object.entries(d.per_jenis).map(([k, v]) => `${esc(k)}: <b>${v}</b>`).join(' · ') || '-'}</div></div></div>
+  <div class="card"><h3>Per bahan</h3>
+  ${d.rows.length ? `<div class="tbl"><table><thead><tr><th>Bahan</th><th class="n">Volume diterima</th><th class="n">Jml pemasok</th><th class="n">Porsi terbesar</th><th class="hm">Desa asal</th></tr></thead><tbody>
+  ${d.rows.map(r => `<tr><td>${esc(r.komoditas)}<div class="small muted sm-only">${esc(r.desa.join(', '))}</div></td><td class="n">${qf(r.qty)} ${esc(r.satuan)}</td><td class="n">${r.jml_pemasok}</td><td class="n"><span class="b ${r.porsi_terbesar > 50 ? 'warn' : 'ok'}">${r.porsi_terbesar}%</span></td><td class="hm" style="white-space:normal">${esc(r.desa.join(', '))}</td></tr>`).join('')}
+  </tbody></table></div>` : '<div class="empty">Belum ada bahan diterima pada periode ini.</div>'}
+  <p class="small muted">Data dari bahan yang lolos QC untuk pesanan SPPG ini. Nama pemasok tidak ditampilkan; rincian tersedia di koperasi.</p></div>`;
+  $('#sGo').onclick = () => { ss('pdari', $('#sD').value); ss('psampai', $('#sS').value); V.pemasok(); };
+  $('#sPr').onclick = () => printDoc('SEBARAN PEMASOK', `<p>Periode ${tglID(d.dari)} – ${tglID(d.sampai)}<br>Jumlah pemasok berbeda: <b>${d.total_pemasok}</b> dari <b>${d.total_desa}</b> desa</p>
+    <table><tr><th>Bahan</th><th class="n">Volume</th><th class="n">Jml pemasok</th><th class="n">Porsi terbesar</th><th>Desa asal</th></tr>
+    ${d.rows.map(r => `<tr><td>${esc(r.komoditas)}</td><td class="n">${qf(r.qty)} ${esc(r.satuan)}</td><td class="n">${r.jml_pemasok}</td><td class="n">${r.porsi_terbesar}%</td><td>${esc(r.desa.join(', '))}</td></tr>`).join('')}</table>`);
+};
+
+/* ======================== AKUN ======================== */
+V.akun = async () => {
+  const wa = String(P.koperasi.wa || '').replace(/\D/g, '');
+  $('#page').innerHTML = `<h2 class="pt">Akun</h2>
+  <div class="card"><h3>${esc(P.sppg.nama)}</h3><div class="sum"><span>Kode</span><b>${esc(P.sppg.kode)}</b></div><div class="sum"><span>Alamat</span><span>${esc(P.sppg.alamat || '-')}</span></div>
+  <div class="sum"><span>PIC</span><span>${esc(P.sppg.pic || '-')}</span></div><div class="sum"><span>No. WA notifikasi</span><span>${esc(P.sppg.hp || '-')}</span></div><div class="sum"><span>Termin bayar</span><span>${esc(P.sppg.termin_hari)} hari</span></div>
+  <p class="small muted">Perubahan data SPPG dilakukan oleh koperasi.</p></div>
+  <div class="card"><h3>Koperasi pemasok</h3><div class="sum"><span>Nama</span><b>${esc(P.koperasi.nama)}</b></div><div class="sum"><span>Alamat</span><span>${esc(P.koperasi.alamat)}</span></div>
+  ${P.koperasi.rekening ? `<div class="sum"><span>Rekening</span><span>${esc(P.koperasi.rekening)}</span></div>` : ''}
+  ${wa ? `<a class="btn ok block mt" style="display:block;text-align:center;text-decoration:none" target="_blank" href="https://wa.me/${wa}">Hubungi koperasi via WhatsApp</a>` : ''}</div>
+  <div class="card"><h3>Ganti PIN</h3><div class="row" id="pinBox"><label class="f">PIN lama<input type="password" name="pin_lama" maxlength="6" inputmode="numeric"></label><label class="f">PIN baru (6 digit)<input type="password" name="pin_baru" maxlength="6" inputmode="numeric"></label></div>
+  <button class="btn pri mt" id="pinGo">Simpan PIN baru</button></div>`;
+  $('#pinGo').onclick = async () => { await run(() => api('portalGantiPin', fd($('#pinBox'))), 'PIN berhasil diganti'); $('#pinBox').querySelectorAll('input').forEach(i => i.value = ''); };
+};
+
+/* ======================== START ======================== */
+(async () => {
+  const t = ss('token');
+  if (t) { P.token = t; try { await boot(); } catch (_) { logout(); } }
+})();
+</script>
+</body>
+</html>
