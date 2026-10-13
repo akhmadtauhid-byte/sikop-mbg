@@ -359,6 +359,7 @@ VIEWS.dashboard = async () => {
 };
 
 /* ---------- Pesanan SPPG ---------- */
+const sumberBadge = r => `<span class="b ${r.sumber === 'Portal' ? 'info' : r.sumber === 'BGN' ? 'warn' : ''}">${esc(r.sumber || 'Admin')}</span>` + (r.ref_eksternal ? ` <span class="muted" style="font-size:12px">${esc(r.ref_eksternal)}</span>` : '');
 VIEWS.po = async () => {
   const st = sessionGet('po_status') || '';
   const rows = await api('listPO', { status: st });
@@ -369,7 +370,7 @@ VIEWS.po = async () => {
   </div></div>
   <div class="card">${table([
     { h: 'No PO', f: r => `<a href="javascript:void 0" data-po="${r.id}"><b>${esc(r.no_po)}</b></a>` }, { h: 'Tgl kirim', f: r => tglID(r.tgl_kirim) },
-    { h: 'SPPG', f: r => esc(sppgName(r.sppg_id)) }, { h: 'Nilai', num: 1, f: r => rp(r.total) }, { h: 'Status', f: r => statusBadge(r.status) },
+    { h: 'SPPG', f: r => esc(sppgName(r.sppg_id)) }, { h: 'Sumber', f: r => sumberBadge(r) }, { h: 'Nilai', num: 1, f: r => rp(r.total) }, { h: 'Status', f: r => statusBadge(r.status) },
     { h: '', f: r => `<button class="btn sm" data-po="${r.id}">Detail</button>` }], rows, { empty: 'Belum ada pesanan' })}</div>`;
   $('#poSt').onchange = e => { sessionSet('po_status', e.target.value); refresh(); };
   $('#page').querySelectorAll('[data-po]').forEach(b => b.onclick = () => poDetail(b.dataset.po));
@@ -384,12 +385,15 @@ function poForm() {
   const m = modal('Pesanan SPPG baru', `
     <div class="row"><label class="f">Mitra SPPG<select name="sppg_id">${opt(S.sppg.filter(s => s.status === 'Aktif'), 'id', 'nama', '', 'Pilih SPPG')}</select></label>
     <label class="f">Tanggal kirim<input type="date" name="tgl_kirim" value="${today()}"></label></div>
+    <div class="row mt"><label class="f">Sumber pesanan<select name="sumber">${opt(['Admin', 'WA', 'Impor', 'BGN'], null, null, 'Admin')}</select></label>
+    <label class="f">No. referensi (opsional)<input name="ref_eksternal" placeholder="No. pesanan BGN / SPPG"></label></div>
     <label class="f mt">Catatan / menu<input name="catatan" placeholder="mis. Menu Senin: nasi, ayam, sayur bening"></label>
     <div class="tbl-wrap mt"><table><thead><tr><th>Komoditas</th><th>Qty</th><th class="num">Harga jual</th><th class="num">Subtotal</th><th></th></tr></thead>
     <tbody id="poItems">${itemRow()}</tbody><tfoot><tr><td colspan="3">Total</td><td class="num" id="poTot">Rp0</td><td></td></tr></tfoot></table></div>
     <button class="btn sm mt" id="addIt">+ Tambah item</button>`, {
     size: 'lg', buttons: [{ label: 'Batal' }, { label: 'Simpan pesanan', cls: 'pri', onClick: async mm => {
-      const f = { sppg_id: mm.querySelector('[name=sppg_id]').value, tgl_kirim: mm.querySelector('[name=tgl_kirim]').value, catatan: mm.querySelector('[name=catatan]').value };
+      const v = n => mm.querySelector(`[name=${n}]`).value;
+      const f = { sppg_id: v('sppg_id'), tgl_kirim: v('tgl_kirim'), catatan: v('catatan'), sumber: v('sumber'), ref_eksternal: v('ref_eksternal') };
       f.items = [...mm.querySelectorAll('#poItems tr')].map(tr => ({ komoditas_id: tr.querySelector('[name=k]').value, qty: tr.querySelector('[name=q]').value })).filter(x => x.komoditas_id && num(x.qty) > 0);
       const id = await run(() => api('createPO', f), 'Pesanan tersimpan');
       refresh(); setTimeout(() => poDetail(id), 300);
@@ -427,7 +431,8 @@ async function poDetail(id) {
     <div class="flow">${flow.map((s, i) => `<span class="${i <= idx ? 'on' : ''}">${s}</span>`).join('')}${po.status === 'Batal' ? '<span class="on" style="background:var(--bad)">Batal</span>' : ''}</div>
     <div class="row"><div style="flex:1"><div class="muted">SPPG</div><b>${esc(sppgName(po.sppg_id))}</b></div>
     <div style="flex:1"><div class="muted">Tanggal kirim</div><b>${tglID(po.tgl_kirim)}</b></div>
-    <div style="flex:1"><div class="muted">Nilai pesanan</div><b>${rp(po.total)}</b></div></div>
+    <div style="flex:1"><div class="muted">Nilai pesanan</div><b>${rp(po.total)}</b></div>
+    <div style="flex:1"><div class="muted">Sumber</div>${sumberBadge(po)}</div></div>
     ${po.catatan ? `<p class="muted">${esc(po.catatan)}</p>` : ''}
     <h3 class="mt">Item pesanan</h3>
     ${table([{ h: 'Komoditas', f: r => esc(kom(r.komoditas_id).nama) }, { h: 'Pesan', num: 1, f: r => qf(r.qty) + ' ' + esc(kom(r.komoditas_id).satuan) },
@@ -537,11 +542,12 @@ VIEWS.kirim = async () => {
   <div class="card"><h3>Surat jalan</h3>${table([
     { h: 'No SJ', k: 'no_sj' }, { h: 'Tgl', f: r => tglID(r.tgl) }, { h: 'PO', f: r => esc((poMap[r.po_id] || {}).no_po) },
     { h: 'SPPG', f: r => esc(sppgName((poMap[r.po_id] || {}).sppg_id)) }, { h: 'Driver', f: r => esc(r.driver + (r.kendaraan ? ' · ' + r.kendaraan : '')) },
-    { h: 'Status', f: r => statusBadge(r.status) }, { h: 'Penerima SPPG', f: r => r.penerima ? `${esc(r.penerima)} (${tglID(r.tgl_bast)})` : '-' },
+    { h: 'Status', f: r => statusBadge(r.status) }, { h: 'Penerima SPPG', f: r => r.penerima ? `${esc(r.penerima)} (${tglID(r.tgl_bast)})${r.bast_via === 'Portal' ? ' <span class="b info">portal</span>' : ''}${r.kondisi === 'Ada selisih' ? ` <span class="b warn" title="${esc(r.catatan)}">ada selisih</span>` : ''}` : '-' },
     { h: '', f: r => `<button class="btn sm" data-p="${r.id}">Cetak SJ</button> ${!r.penerima && can('gudang') ? `<button class="btn sm pri" data-b="${r.id}">BAST</button>` : ''}` }], sj, { empty: 'Belum ada pengiriman' })}</div>`;
   $('#page').querySelectorAll('[data-k]').forEach(b => b.onclick = () => kirimForm(poMap[b.dataset.k]));
   $('#page').querySelectorAll('[data-b]').forEach(b => b.onclick = () => {
-    modal('Konfirmasi BAST', `<label class="f">Nama penerima di SPPG<input name="penerima"></label><label class="f mt">Tanggal terima<input type="date" name="tgl" value="${today()}"></label><label class="f mt">Catatan<input name="catatan"></label>`,
+    modal('Konfirmasi BAST', `<label class="f">Nama penerima di SPPG<input name="penerima"></label><label class="f mt">Tanggal terima<input type="date" name="tgl" value="${today()}"></label>
+      <label class="f mt">Kondisi<select name="kondisi">${opt(['Sesuai', 'Ada selisih'])}</select></label><label class="f mt">Catatan<input name="catatan"></label>`,
       { buttons: [{ label: 'Batal' }, { label: 'Simpan BAST', cls: 'pri', onClick: async m => { await run(() => api('konfirmasiBAST', { id: b.dataset.b, ...formData(m) }), 'BAST tersimpan'); refresh(); } }] });
   });
   $('#page').querySelectorAll('[data-p]').forEach(b => b.onclick = async () => {
@@ -592,6 +598,7 @@ function printInvoice(i) {
   <table><tr><th>No</th><th>Komoditas</th><th class="num">Qty</th><th>Satuan</th><th class="num">Harga</th><th class="num">Jumlah</th></tr>
   ${det.map((x, k) => `<tr><td>${k + 1}</td><td>${esc(x.komoditas)}</td><td class="num">${qf(x.qty)}</td><td>${esc(x.satuan)}</td><td class="num">${rp(x.harga)}</td><td class="num">${rp(x.subtotal)}</td></tr>`).join('')}
   <tr><th colspan="5">Total</th><th class="num">${rp(i.total)}</th></tr><tr><td colspan="5">Sudah dibayar</td><td class="num">${rp(i.dibayar)}</td></tr><tr><th colspan="5">Sisa tagihan</th><th class="num">${rp(i.sisa)}</th></tr></table>
+  ${S.settings.rekening_koperasi ? `<p>Pembayaran ke: <b>${esc(S.settings.rekening_koperasi)}</b> (berita: ${esc(i.no_inv)})</p>` : ''}
   <div class="sig"><div>Penerima<p>&nbsp;</p></div><div>Bendahara Koperasi<p>&nbsp;</p></div></div>`);
 }
 
@@ -779,11 +786,17 @@ VIEWS.sppg = async () => {
   await reloadMaster();
   $('#page').innerHTML = `<div class="card"><div class="row"><p class="muted" style="flex:1;margin:0">Dapur SPPG yang dilayani koperasi. Termin menentukan jatuh tempo invoice.</p>${can('master') ? '<button class="btn pri" id="sAdd">+ SPPG</button>' : ''}</div></div>
   <div class="card">${table([{ h: 'Kode', k: 'kode' }, { h: 'Nama', k: 'nama' }, { h: 'Alamat', k: 'alamat' }, { h: 'PIC', k: 'pic' }, { h: 'HP', k: 'hp' }, { h: 'Termin', num: 1, f: r => r.termin_hari + ' hr' },
-    { h: 'Status', f: r => statusBadge(r.status) }, { h: '', f: r => can('master') ? `<button class="btn sm" data-e="${r.id}">Ubah</button>` : '' }], S.sppg, { empty: 'Belum ada SPPG' })}</div>`;
+    { h: 'Portal', f: r => r.portal_aktif === 'YA' ? '<span class="b ok">aktif</span>' : '<span class="b">nonaktif</span>' },
+    { h: 'Status', f: r => statusBadge(r.status) }, { h: '', f: r => can('master') ? `<button class="btn sm" data-e="${r.id}">Ubah</button>` : '' }], S.sppg, { empty: 'Belum ada SPPG' })}</div>
+  <div class="card"><h3>Portal SPPG</h3><p class="muted" style="margin:0">SPPG yang portalnya aktif bisa memesan sendiri, memantau status, mengonfirmasi terima barang, dan mengunduh tagihan di <b>portal.html</b>. Login memakai <b>Kode SPPG</b> + PIN portal. Pesanan dari portal masuk ke Pesanan SPPG dengan sumber <span class="b info">Portal</span>.</p></div>`;
   const form = s => modal(s.id ? 'Ubah SPPG' : 'SPPG baru', `<div class="row"><label class="f">Kode<input name="kode" value="${esc(s.kode)}"></label><label class="f" style="flex:2">Nama SPPG<input name="nama" value="${esc(s.nama)}"></label></div>
     <label class="f mt">Alamat<input name="alamat" value="${esc(s.alamat)}"></label>
     <div class="row mt"><label class="f">PIC / Kepala SPPG<input name="pic" value="${esc(s.pic)}"></label><label class="f">HP<input name="hp" value="${esc(s.hp)}"></label></div>
-    <div class="row mt"><label class="f">Termin bayar (hari)<input type="number" name="termin_hari" value="${esc(s.termin_hari || 14)}"></label><label class="f">Status<select name="status">${opt(['Aktif', 'Nonaktif'], null, null, s.status || 'Aktif')}</select></label></div>`,
+    <div class="row mt"><label class="f">Termin bayar (hari)<input type="number" name="termin_hari" value="${esc(s.termin_hari || 14)}"></label><label class="f">Status<select name="status">${opt(['Aktif', 'Nonaktif'], null, null, s.status || 'Aktif')}</select></label></div>
+    <div class="card mt" style="background:#f7faf7;box-shadow:none;margin-bottom:0"><b>Akses Portal SPPG</b>
+    <div class="row mt"><label class="f">Portal<select name="portal_aktif">${opt(['TIDAK', 'YA'], null, null, s.portal_aktif || 'TIDAK')}</select></label>
+    <label class="f">PIN portal ${s.punya_pin ? '(kosongkan jika tidak diganti)' : '(6 digit)'}<input name="pin" type="password" maxlength="6" inputmode="numeric"></label></div>
+    <p class="muted" style="font-size:12.5px;margin:6px 0 0">Berikan Kode SPPG + PIN ini ke petugas SPPG. HP di atas menerima notifikasi status pesanan via WA.</p></div>`,
     { buttons: [{ label: 'Batal' }, { label: 'Simpan', cls: 'pri', onClick: async m => { await run(() => api('saveSPPG', { ...formData(m), id: s.id }), 'SPPG tersimpan'); refresh(); } }] });
   if ($('#sAdd')) $('#sAdd').onclick = () => form({});
   $('#page').querySelectorAll('[data-e]').forEach(b => b.onclick = () => form(byId(S.sppg, b.dataset.e)));
@@ -820,6 +833,7 @@ VIEWS.setting = async () => {
     <div class="row">${F('nama_koperasi', 'Nama koperasi')}${F('alamat_koperasi', 'Alamat')}</div>
     <div class="row mt">${F('margin_maks_persen', 'Batas margin (%)', 'number')}${F('maks_porsi_pemasok_persen', 'Porsi maks. per pemasok (%)', 'number')}${F('jasa_pinjaman_persen_bln', 'Jasa pinjaman default (%/bln)', 'number')}</div>
     <div class="row mt">${F('simpanan_pokok', 'Simpanan pokok (Rp)', 'number')}${F('simpanan_wajib_bulanan', 'Simpanan wajib/bulan (Rp)', 'number')}</div>
+    <div class="row mt">${F('portal_min_hari', 'Portal: pesan paling lambat H-', 'number')}${F('wa_admin', 'WA admin (notifikasi pesanan portal)')}${F('rekening_koperasi', 'Rekening koperasi (tampil di tagihan)')}</div>
     <div class="row mt">${F('fonnte_token', 'Token Fonnte (WA)')}<label class="f">Notifikasi WA<select name="wa_aktif" ${admin ? '' : 'disabled'}>${opt(['TIDAK', 'YA'], null, null, st.wa_aktif)}</select></label></div>
     ${admin ? '<button class="btn pri mt" id="stGo">Simpan pengaturan</button>' : ''}</div></div>
   ${admin ? `<div class="card"><div class="row"><h3 style="flex:1;margin:0">Pengguna</h3><button class="btn pri" id="uAdd">+ Pengguna</button></div><div class="mt"></div>
