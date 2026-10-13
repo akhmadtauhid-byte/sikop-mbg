@@ -150,19 +150,19 @@ const S = { token: null, user: null, perms: [], settings: {}, anggota: [], sppg:
 const $ = s => document.querySelector(s);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = v => { const x = Number(String(v ?? '').replace(',', '.')); return isFinite(x) ? x : 0; };
-const rp = v => 'Rp' + Math.round(num(v)).toLocaleString('id-ID');
+const rp = v => (num(v) < 0 ? '−Rp' : 'Rp') + Math.abs(Math.round(num(v))).toLocaleString('id-ID');
 const qf = v => num(v).toLocaleString('id-ID', { maximumFractionDigits: 2 });
 const today = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
 const tglID = s => { if (!s) return '-'; const [y, m, d] = String(s).slice(0, 10).split('-'); return `${d}/${m}/${y}`; };
 const can = p => S.perms.includes('*') || S.perms.includes(p);
 const byId = (arr, id) => arr.find(x => x.id === id) || {};
-const agtName = id => byId(S.anggota, id).nama || '-';
+const agtName = id => id === 'GUDANG' ? 'Stok Gudang' : (byId(S.anggota, id).nama || '-');
 const sppgName = id => byId(S.sppg, id).nama || '-';
 const kom = id => byId(S.komoditas, id);
 const statusBadge = s => {
   const m = { 'Baru': 'info', 'Dialokasikan': 'info', 'Diterima': 'warn', 'Dikirim': 'warn', 'Ditagih': 'warn', 'Lunas': 'ok', 'Batal': 'bad',
     'Belum Lunas': 'warn', 'Sebagian': 'warn', 'Aktif': 'ok', 'Nonaktif': 'bad', 'Keluar': 'bad', 'Rencana': 'info', 'Ditolak': 'bad',
-    'Dalam Perjalanan': 'warn', 'Diterima SPPG': 'ok', 'YA': 'ok', 'TIDAK': 'bad' };
+    'Dalam Perjalanan': 'warn', 'Diterima SPPG': 'ok', 'YA': 'ok', 'TIDAK': 'bad', 'Habis': '' };
   return `<span class="b ${m[s] || ''}">${esc(s)}</span>`;
 };
 
@@ -284,6 +284,7 @@ const PAGES = [
   { id: 'po', label: 'Pesanan SPPG', ic: '▤', perm: 'view' },
   { id: 'terima', label: 'Penerimaan & QC', ic: '✓', perm: 'view' },
   { id: 'kirim', label: 'Pengiriman & BAST', ic: '➜', perm: 'view' },
+  { id: 'stok', label: 'Stok Gudang', ic: '▣', perm: 'view' },
   { sec: 'Keuangan' },
   { id: 'tagihan', label: 'Tagihan SPPG', ic: '₿', perm: 'view' },
   { id: 'bayar', label: 'Bayar Anggota', ic: '⇄', perm: 'view' },
@@ -328,6 +329,7 @@ VIEWS.dashboard = async () => {
     ...d.harga_warning.map(w => `<div class="alert warn">⚠ Harga: ${esc(w)}</div>`),
     ...d.konsentrasi.filter(k => k.melebihi).map(k => `<div class="alert warn">⚠ Pasokan ${esc(k.komoditas)} 30 hari terakhir ${k.porsi_top}% dari satu pemasok (${esc(agtName(k.top_anggota_id))}). Tambah pemasok agar tidak bergantung pada satu anggota.</div>`),
     d.piutang_lewat > 0 ? `<div class="alert bad">Piutang SPPG lewat jatuh tempo: <b>${rp(d.piutang_lewat)}</b></div>` : '',
+    ...(d.stok ? d.stok.warning : []).map(w => `<div class="alert ${w.tingkat}">▣ Stok: ${esc(w.teks)}</div>`),
     d.hutang_lewat14 > 0 ? `<div class="alert bad">Pembayaran ke anggota tertunda &gt;14 hari: <b>${rp(d.hutang_lewat14)}</b> — prioritaskan agar tidak terjadi tunggakan ke pemasok.</div>` : ''
   ].join('');
   $('#page').innerHTML = `
@@ -337,6 +339,7 @@ VIEWS.dashboard = async () => {
     <div class="kpi ${d.piutang_lewat > 0 ? 'bad' : ''}"><div class="l">Piutang SPPG</div><div class="v">${rp(d.piutang_total)}</div><div class="s">lewat tempo ${rp(d.piutang_lewat)}</div></div>
     <div class="kpi ${d.hutang_lewat14 > 0 ? 'bad' : ''}"><div class="l">Utang ke anggota</div><div class="v">${rp(d.hutang_total)}</div><div class="s">&gt;14 hari ${rp(d.hutang_lewat14)}</div></div>
     <div class="kpi"><div class="l">Saldo kas</div><div class="v">${rp(d.saldo_kas)}</div><div class="s">${d.anggota_aktif} anggota aktif</div></div>
+    <div class="kpi"><div class="l">Nilai stok gudang</div><div class="v">${rp(d.stok ? d.stok.nilai : 0)}</div><div class="s">${d.stok && d.stok.warning.length ? d.stok.warning.length + ' peringatan' : 'aman'}</div></div>
     <div class="kpi"><div class="l">Kirim hari ini</div><div class="v">${d.po_hari_ini} PO</div><div class="s">${tglID(today())}</div></div>
   </div>
   ${alerts ? `<div class="card"><h3>Perlu perhatian</h3>${alerts}</div>` : ''}
@@ -421,11 +424,13 @@ async function poDetail(id) {
   const d = await run(() => api('getPO', { id }));
   const po = d.po;
   const editable = ['Baru', 'Dialokasikan'].includes(po.status) && can('pembelian');
+  d.stok = {};
+  if (editable) { try { (await api('listStok')).rows.forEach(r => d.stok[r.komoditas_id] = r); } catch (_) {} }
   const flow = ['Baru', 'Dialokasikan', 'Diterima', 'Dikirim', 'Ditagih', 'Lunas'];
   const idx = flow.indexOf(po.status);
   const itemStats = d.items.map(it => {
     const al = d.alokasi.filter(a => a.po_item_id === it.id);
-    return { ...it, alok: al.reduce((s, a) => s + num(a.qty_rencana), 0), terima: al.reduce((s, a) => s + num(a.qty_terima), 0), n: al.length };
+    return { ...it, alok: al.reduce((s, a) => s + num(a.qty_rencana), 0), terima: al.reduce((s, a) => s + num(a.qty_terima), 0), n: al.filter(a => a.anggota_id !== 'GUDANG').length, g: al.some(a => a.anggota_id === 'GUDANG') };
   });
   const body = `
     <div class="flow">${flow.map((s, i) => `<span class="${i <= idx ? 'on' : ''}">${s}</span>`).join('')}${po.status === 'Batal' ? '<span class="on" style="background:var(--bad)">Batal</span>' : ''}</div>
@@ -436,7 +441,7 @@ async function poDetail(id) {
     ${po.catatan ? `<p class="muted">${esc(po.catatan)}</p>` : ''}
     <h3 class="mt">Item pesanan</h3>
     ${table([{ h: 'Komoditas', f: r => esc(kom(r.komoditas_id).nama) }, { h: 'Pesan', num: 1, f: r => qf(r.qty) + ' ' + esc(kom(r.komoditas_id).satuan) },
-      { h: 'Dialokasikan', num: 1, f: r => `${qf(r.alok)} <span class="muted">(${r.n} pemasok)</span>` + (r.alok + 1e-6 < num(r.qty) ? ' <span class="b warn">kurang</span>' : '') },
+      { h: 'Dialokasikan', num: 1, f: r => `${qf(r.alok)} <span class="muted">(${r.n} pemasok${r.g ? ' + gudang' : ''})</span>` + (r.alok + 1e-6 < num(r.qty) ? ' <span class="b warn">kurang</span>' : '') },
       { h: 'Diterima QC', num: 1, f: r => qf(r.terima) }, { h: 'Harga jual', num: 1, f: r => rp(r.harga_jual) }, { h: 'Subtotal', num: 1, f: r => rp(r.subtotal) }], itemStats)}
     <h3 class="mt">Alokasi ke anggota pemasok</h3>
     <div id="alokBox"></div>
@@ -470,7 +475,9 @@ function renderAlokasi(box, d, editable) {
       const list = S.anggota.filter(a => a.status === 'Aktif');
       const match = list.filter(a => String(a.komoditas).split(',').includes(String(k.kode).toUpperCase()));
       const others = list.filter(a => !match.includes(a));
-      return `<option value="">Pilih anggota</option><optgroup label="Pemasok ${esc(k.nama || '')}">${opt(match, 'id', a => `${a.nama} — ${a.desa || ''}`, sel)}</optgroup><optgroup label="Anggota lain">${opt(others, 'id', 'nama', sel)}</optgroup>`;
+      const st = d.stok[k.id];
+      const g = st ? `<option value="GUDANG" ${sel === 'GUDANG' ? 'selected' : ''}>Stok Gudang (sisa ${qf(st.sisa)}, bebas ${qf(st.tersedia)} ${esc(k.satuan)})</option>` : '';
+      return `<option value="">Pilih anggota</option>${g}<optgroup label="Pemasok ${esc(k.nama || '')}">${opt(match, 'id', a => `${a.nama} — ${a.desa || ''}`, sel)}</optgroup><optgroup label="Anggota lain">${opt(others, 'id', 'nama', sel)}</optgroup>`;
     };
     box.innerHTML = `${warnings.map(w => `<div class="alert warn">${esc(w)}</div>`).join('')}
       <div class="tbl-wrap"><table><thead><tr><th>Item</th><th>Anggota</th><th>Qty rencana</th><th>Harga beli</th><th class="num">Nilai</th><th></th></tr></thead><tbody>
@@ -479,12 +486,13 @@ function renderAlokasi(box, d, editable) {
       <td class="num">${rp(num(r.qty_rencana) * num(r.harga_beli))}</td><td><button class="btn sm bad" data-del="${i}">×</button></td></tr>`).join('') || '<tr><td colspan="6" class="empty">Belum ada alokasi — klik "Saran otomatis"</td></tr>'}
       </tbody></table></div>
       <div class="row mt"><button class="btn sm" id="sar">⚡ Saran otomatis</button><button class="btn sm" id="addA">+ Baris</button><div style="flex:1"></div><button class="btn sm pri" id="saveA">Simpan alokasi & kirim WA</button></div>
-      <p class="muted" style="font-size:12.5px">Saran otomatis membagi pesanan ke beberapa anggota sesuai kapasitas, dengan porsi maksimal ${esc(S.settings.maks_porsi_pemasok_persen)}% per pemasok.</p>`;
+      <p class="muted" style="font-size:12.5px">Saran otomatis mengambil dari Stok Gudang dulu (untuk barang yang dikelola stok), lalu membagi sisanya ke beberapa anggota sesuai kapasitas, maksimal ${esc(S.settings.maks_porsi_pemasok_persen)}% per pemasok.</p>`;
     box.querySelectorAll('tr[data-i]').forEach(tr => {
       const r = rows[+tr.dataset.i];
       tr.querySelectorAll('[data-f]').forEach(el => el.onchange = () => {
         r[el.dataset.f] = el.value;
         if (el.dataset.f === 'po_item_id') { const it = byId(items, el.value); r.komoditas_id = it.komoditas_id; r.harga_beli = kom(it.komoditas_id).harga_beli; }
+        if (el.dataset.f === 'anggota_id') { const st = d.stok[byId(items, r.po_item_id).komoditas_id]; r.harga_beli = el.value === 'GUDANG' && st ? st.harga_rata : kom(byId(items, r.po_item_id).komoditas_id).harga_beli; }
         draw(warnings);
       });
     });
@@ -566,6 +574,110 @@ function kirimForm(po) {
   <label class="f mt">Catatan<input name="catatan"></label>`, { buttons: [{ label: 'Batal' }, { label: 'Buat surat jalan', cls: 'pri', onClick: async m => {
     await run(() => api('kirimPO', { po_id: po.id, ...formData(m) }), 'Surat jalan dibuat'); refresh();
   } }] });
+}
+
+/* ---------- Stok Gudang ---------- */
+VIEWS.stok = async () => {
+  await reloadMaster();
+  const d = await api('listStok');
+  const ed = can('gudang');
+  const exp7 = d.rows.filter(r => r.qty_7hari > 0).length, expd = d.rows.filter(r => r.qty_kedaluwarsa > 0).length, minN = d.rows.filter(r => r.dibawah_min).length;
+  const cols = [
+    { h: 'Kode', k: 'kode', csv: r => r.kode }, { h: 'Barang', f: r => `<b>${esc(r.nama)}</b><div class="muted" style="font-size:12px">${esc(r.kategori || '')}</div>`, csv: r => r.nama },
+    { h: 'Stok', num: 1, f: r => `${qf(r.sisa)} ${esc(r.satuan)}`, csv: r => r.sisa }, { h: 'Untuk PO', num: 1, f: r => r.dipesan ? qf(r.dipesan) : '-', csv: r => r.dipesan },
+    { h: 'Bebas', num: 1, f: r => `<span class="b ${r.dibawah_min ? 'warn' : 'ok'}">${qf(r.tersedia)}</span>`, csv: r => r.tersedia },
+    { h: 'Min', num: 1, f: r => r.stok_min ? qf(r.stok_min) : '-', csv: r => r.stok_min },
+    { h: 'Harga rata²', num: 1, f: r => rp(r.harga_rata), csv: r => r.harga_rata }, { h: 'Nilai', num: 1, f: r => rp(r.nilai), csv: r => r.nilai },
+    { h: 'Kedaluwarsa terdekat', f: r => r.kedaluwarsa_terdekat ? tglID(r.kedaluwarsa_terdekat) + (r.qty_kedaluwarsa ? ' <span class="b bad">lewat</span>' : r.qty_7hari ? ' <span class="b warn">≤7 hr</span>' : '') : '-', csv: r => r.kedaluwarsa_terdekat },
+    { h: '', f: r => `<button class="btn sm" data-kartu="${r.komoditas_id}">Kartu</button>${ed ? ` <button class="btn sm pri" data-in="${r.komoditas_id}" title="Barang masuk">+</button>` : ''}` }];
+  $('#page').innerHTML = `
+  <div class="kpis">
+    <div class="kpi"><div class="l">Nilai persediaan</div><div class="v">${rp(d.nilai_total)}</div><div class="s">${d.rows.length} jenis barang</div></div>
+    <div class="kpi ${minN ? 'bad' : ''}"><div class="l">Di bawah minimum</div><div class="v">${minN}</div></div>
+    <div class="kpi ${exp7 ? 'bad' : ''}"><div class="l">Kedaluwarsa ≤ 7 hari</div><div class="v">${exp7}</div></div>
+    <div class="kpi ${expd ? 'bad' : ''}"><div class="l">Sudah kedaluwarsa</div><div class="v">${expd}</div></div>
+  </div>
+  ${d.warning.length ? `<div class="card"><h3>Perlu perhatian</h3>${d.warning.map(w => `<div class="alert ${w.tingkat}">${esc(w.teks)}</div>`).join('')}</div>` : ''}
+  <div class="card"><div class="row" style="align-items:center"><p class="muted" style="flex:1;margin:0">Barang yang disimpan koperasi. Stok berkurang otomatis saat PO yang dialokasikan ke <b>Stok Gudang</b> disimpan di Penerimaan & QC. Barang dengan kedaluwarsa terdekat keluar lebih dulu.</p>
+    ${ed ? '<button class="btn" id="sAdj">Penyesuaian</button><button class="btn" id="sOp">Stok opname</button><button class="btn pri" id="sIn">+ Barang masuk</button>' : ''}<button class="btn" id="sCsv">CSV</button></div><div class="mt"></div>
+  ${table(cols, d.rows, { empty: 'Belum ada barang yang dikelola stok. Buka Komoditas & Harga → Ubah → Kelola stok gudang = YA (mis. minyak goreng, sabun cuci piring).' })}</div>`;
+  $('#sCsv').onclick = () => downloadCSV('stok_gudang_' + today(), cols.filter(c => c.csv), d.rows);
+  $('#page').querySelectorAll('[data-kartu]').forEach(b => b.onclick = () => kartuStok(b.dataset.kartu));
+  if (!ed) return;
+  $('#page').querySelectorAll('[data-in]').forEach(b => b.onclick = () => stokMasukForm(b.dataset.in));
+  $('#sIn').onclick = () => stokMasukForm('');
+  $('#sAdj').onclick = () => stokAdjForm(d.rows);
+  $('#sOp').onclick = () => opnameForm(d.rows);
+};
+const komStok = () => S.komoditas.filter(k => k.kelola_stok === 'YA' && k.aktif === 'YA');
+function stokMasukForm(kid) {
+  if (!komStok().length) return toast('Belum ada komoditas dengan Kelola stok = YA.', true);
+  const m = modal('Barang masuk gudang', `
+    <div class="row"><label class="f">Barang<select name="komoditas_id">${opt(komStok(), 'id', k => `${k.nama} (${k.satuan})`, kid || komStok()[0].id)}</select></label>
+    <label class="f">Sumber<select name="sumber">${opt([['Beli Luar', 'Beli dari toko/distributor'], ['Anggota', 'Dari anggota koperasi'], ['Saldo Awal', 'Saldo awal (stok yang sudah ada)']].map(x => ({ v: x[0], l: x[1] })), 'v', 'l', 'Beli Luar')}</select></label></div>
+    <div class="row mt" id="rowAgt"><label class="f">Anggota<select name="anggota_id"></select></label></div>
+    <div class="row mt" id="rowPms"><label class="f">Nama toko / distributor<input name="pemasok" placeholder="mis. Toko Sumber Rejeki"></label><label class="f">No. nota<input name="ket" placeholder="opsional"></label></div>
+    <div class="row mt"><label class="f">Jumlah<input type="number" step="0.01" name="qty"></label><label class="f">Harga beli / satuan<input type="number" name="harga"></label>
+    <label class="f">Tanggal masuk<input type="date" name="tgl" value="${today()}"></label><label class="f">Kedaluwarsa<input type="date" name="kedaluwarsa"></label></div>
+    <div class="alert info mt" id="sInInfo"></div>`,
+  { buttons: [{ label: 'Batal' }, { label: 'Simpan barang masuk', cls: 'pri', onClick: async mm => { await run(() => api('stokMasuk', formData(mm)), 'Barang masuk tercatat'); refresh(); } }] });
+  const upd = (resetHarga) => {
+    const f = formData(m), k = kom(f.komoditas_id);
+    if (resetHarga) m.querySelector('[name=harga]').value = k.harga_beli || '';
+    const ag = S.anggota.filter(a => a.status === 'Aktif'), match = ag.filter(a => String(a.komoditas).split(',').includes(k.kode));
+    const sel = m.querySelector('[name=anggota_id]'), cur = sel.value;
+    sel.innerHTML = `<optgroup label="Pemasok ${esc(k.nama)}">${opt(match, 'id', 'nama', cur)}</optgroup><optgroup label="Anggota lain">${opt(ag.filter(a => !match.includes(a)), 'id', 'nama', cur)}</optgroup>`;
+    m.querySelector('#rowAgt').classList.toggle('hidden', f.sumber !== 'Anggota');
+    m.querySelector('#rowPms').classList.toggle('hidden', f.sumber !== 'Beli Luar');
+    const tot = num(f.qty) * num(m.querySelector('[name=harga]').value);
+    m.querySelector('#sInInfo').innerHTML = `Nilai: <b>${rp(tot)}</b> — ` + ({ 'Beli Luar': 'dicatat sebagai kas keluar "Pembelian Stok".', 'Anggota': 'menjadi utang ke anggota dan dibayar lewat menu <b>Bayar Anggota</b> (dihitung untuk SHU).', 'Saldo Awal': 'tanpa transaksi kas (stok yang sudah ada sebelum memakai sistem).' }[f.sumber]);
+  };
+  m.querySelector('[name=komoditas_id]').onchange = () => upd(true);
+  m.querySelector('.mbody').oninput = () => upd(false);
+  m.querySelector('[name=sumber]').onchange = () => upd(false);
+  upd(true);
+}
+function stokAdjForm(rows) {
+  if (!rows.length) return toast('Belum ada barang dikelola stok.', true);
+  modal('Penyesuaian stok (keluar)', `
+    <label class="f">Barang<select name="komoditas_id">${opt(rows, 'komoditas_id', r => `${r.nama} — bebas ${qf(r.tersedia)} ${r.satuan}`, rows[0].komoditas_id)}</select></label>
+    <div class="row mt"><label class="f">Alasan<select name="alasan">${opt(['Rusak', 'Kedaluwarsa', 'Susut'])}</select></label><label class="f">Jumlah keluar<input type="number" step="0.01" name="qty"></label><label class="f">Tanggal<input type="date" name="tgl" value="${today()}"></label></div>
+    <label class="f mt">Keterangan<input name="ket" placeholder="mis. jeriken bocor, kemasan penyok"></label>
+    <p class="muted" style="font-size:12.5px">Nilai barang yang dikeluarkan dicatat sebagai kerugian susut di Laporan. Alasan "Kedaluwarsa" mengambil batch yang sudah lewat tanggal lebih dulu.</p>`,
+  { buttons: [{ label: 'Batal' }, { label: 'Simpan', cls: 'pri', onClick: async m => { const r = await run(() => api('stokPenyesuaian', formData(m))); toast(`Stok berkurang, nilai ${rp(r.nilai)}`); refresh(); } }] });
+}
+function opnameForm(rows) {
+  if (!rows.length) return toast('Belum ada barang dikelola stok.', true);
+  const m = modal('Stok opname', `<p class="muted" style="margin-top:0">Hitung fisik barang di gudang, isi kolom <b>Fisik</b>. Kosongkan baris yang tidak dihitung. Selisih otomatis dicatat sebagai penyesuaian.</p>
+    <div class="tbl-wrap"><table><thead><tr><th>Barang</th><th class="num">Sistem</th><th>Fisik</th><th class="num">Selisih</th></tr></thead><tbody>
+    ${rows.map(r => `<tr data-k="${r.komoditas_id}" data-s="${r.sisa}"><td>${esc(r.nama)}</td><td class="num">${qf(r.sisa)} ${esc(r.satuan)}</td><td><input type="number" step="0.01" data-fis></td><td class="num" data-sel>-</td></tr>`).join('')}
+    </tbody></table></div><div class="row mt"><label class="f" style="max-width:200px">Tanggal opname<input type="date" id="opTgl" value="${today()}"></label><label class="f">Keterangan<input id="opKet" placeholder="mis. opname akhir bulan"></label></div>`,
+  { size: 'lg', buttons: [{ label: 'Batal' }, { label: 'Simpan hasil opname', cls: 'pri', onClick: async mm => {
+    const list = [...mm.querySelectorAll('tr[data-k]')].filter(tr => tr.querySelector('[data-fis]').value !== '');
+    if (!list.length) { toast('Isi minimal satu jumlah fisik.', true); return true; }
+    let n = 0;
+    for (const tr of list) { await run(() => api('stokPenyesuaian', { komoditas_id: tr.dataset.k, alasan: 'Opname', stok_fisik: tr.querySelector('[data-fis]').value, tgl: mm.querySelector('#opTgl').value, ket: mm.querySelector('#opKet').value })); n++; }
+    toast(`Opname ${n} barang tersimpan`); refresh();
+  } }] });
+  m.querySelector('.mbody').oninput = () => m.querySelectorAll('tr[data-k]').forEach(tr => {
+    const v = tr.querySelector('[data-fis]').value, c = tr.querySelector('[data-sel]');
+    if (v === '') { c.textContent = '-'; return; }
+    const sel = num(v) - num(tr.dataset.s); c.innerHTML = `<span class="b ${sel < 0 ? 'bad' : sel > 0 ? 'info' : 'ok'}">${sel > 0 ? '+' : ''}${qf(sel)}</span>`;
+  });
+}
+async function kartuStok(kid) {
+  const d = await run(() => api('getKartuStok', { komoditas_id: kid }));
+  const k = d.komoditas;
+  const mcols = [{ h: 'Tgl', f: r => tglID(r.tgl), csv: r => r.tgl }, { h: 'Jenis', f: r => `<span class="b ${r.qty > 0 ? 'ok' : r.jenis === 'Keluar' ? 'info' : 'warn'}">${esc(r.jenis)}</span> ${esc(r.alasan)}`, csv: r => r.jenis + ' ' + r.alasan },
+    { h: 'Masuk', num: 1, f: r => num(r.qty) > 0 ? qf(r.qty) : '', csv: r => num(r.qty) > 0 ? r.qty : '' }, { h: 'Keluar', num: 1, f: r => num(r.qty) < 0 ? qf(-num(r.qty)) : '', csv: r => num(r.qty) < 0 ? -num(r.qty) : '' },
+    { h: 'Saldo', num: 1, f: r => `<b>${qf(r.saldo)}</b>`, csv: r => r.saldo }, { h: 'Nilai', num: 1, f: r => rp(r.nilai), csv: r => r.nilai }, { h: 'Ref', k: 'ref', csv: r => r.ref }, { h: 'Ket', k: 'ket', csv: r => r.ket }, { h: 'Oleh', k: 'oleh', csv: r => r.oleh }];
+  modal(`Kartu stok — ${k.nama} (${k.satuan})`, `
+    <h3 style="margin-top:0">Batch / lot</h3>
+    ${table([{ h: 'Ref', k: 'ref' }, { h: 'Masuk', f: r => tglID(r.tgl_masuk) }, { h: 'Sumber', f: r => `${esc(r.sumber)}${r.pemasok_nama ? ' · ' + esc(r.pemasok_nama) : ''}` }, { h: 'Awal', num: 1, f: r => qf(r.qty_awal) },
+      { h: 'Sisa', num: 1, f: r => `<b>${qf(r.sisa)}</b>` }, { h: 'Harga', num: 1, f: r => rp(r.harga) }, { h: 'Kedaluwarsa', f: r => r.kedaluwarsa ? tglID(r.kedaluwarsa) + (r.kedaluwarsa < today() && num(r.sisa) > 0 ? ' <span class="b bad">lewat</span>' : '') : '-' },
+      { h: 'Status', f: r => statusBadge(r.status) }], d.batches, { empty: 'Belum ada barang masuk' })}
+    <h3 class="mt">Mutasi</h3>${table(mcols, d.mutasi, { empty: 'Belum ada mutasi' })}`,
+  { size: 'lg', buttons: [{ label: 'Tutup' }, { label: 'Unduh CSV', onClick: () => { downloadCSV('kartu_stok_' + k.nama, mcols, d.mutasi); return true; } }] });
 }
 
 /* ---------- Tagihan SPPG ---------- */
@@ -729,6 +841,7 @@ VIEWS.laporan = async () => {
     <div class="sum tot"><span>Laba kotor</span><span>${rp(d.laba_kotor)}</span></div>
     <div class="sum"><span>Pendapatan jasa pinjaman</span><b>${rp(d.jasa_pinjaman)}</b></div><div class="sum"><span>Pendapatan lain</span><b>${rp(d.pendapatan_lain)}</b></div>
     <div class="sum"><span>Biaya operasional</span><b>−${rp(d.biaya_operasional)}</b></div>
+    <div class="sum"><span>Susut / rusak / kedaluwarsa stok</span><b>${d.susut_stok >= 0 ? '−' : '+'}${rp(Math.abs(d.susut_stok || 0))}</b></div>
     <div class="sum tot"><span>Sisa hasil usaha (estimasi)</span><span>${rp(d.sisa_hasil_usaha)}</span></div>
     <p class="muted" style="font-size:12px">Basis: invoice yang diterbitkan pada periode (akrual penjualan) dan kas untuk biaya. Belum termasuk penyusutan & pajak.</p></div>
   <div class="two"><div class="card"><h3>Per SPPG</h3>${table([{ h: 'SPPG', k: 'nama' }, { h: 'Invoice', num: 1, k: 'jml_invoice' }, { h: 'Omzet', num: 1, f: r => rp(r.omzet) }, { h: 'Dibayar', num: 1, f: r => rp(r.dibayar) }], d.per_sppg)}</div>
@@ -810,13 +923,17 @@ VIEWS.komoditas = async () => {
   <div class="card">${table([{ h: 'Kode', k: 'kode' }, { h: 'Nama', k: 'nama' }, { h: 'Kategori', k: 'kategori' }, { h: 'Satuan', k: 'satuan' },
     { h: 'Harga beli', num: 1, f: r => rp(r.harga_beli) }, { h: 'Harga jual', num: 1, f: r => rp(r.harga_jual) }, { h: 'Acuan', num: 1, f: r => r.harga_acuan ? rp(r.harga_acuan) : '-' },
     { h: 'Margin', num: 1, f: r => { const m = num(r.harga_beli) ? (num(r.harga_jual) - num(r.harga_beli)) / num(r.harga_beli) * 100 : 0; const over = m > maxM || (num(r.harga_acuan) && num(r.harga_jual) > num(r.harga_acuan)); return `<span class="b ${over ? 'warn' : 'ok'}">${m.toFixed(1)}%</span>`; } },
+    { h: 'Stok gudang', f: r => r.kelola_stok === 'YA' ? `<span class="b info">dikelola</span>${num(r.stok_min) ? ` <span class="muted" style="font-size:12px">min ${qf(r.stok_min)}</span>` : ''}` : '-' },
     { h: 'Aktif', f: r => statusBadge(r.aktif) }, { h: '', f: r => can('master') ? `<button class="btn sm" data-e="${r.id}">Ubah</button>` : '' }], S.komoditas, { empty: 'Belum ada komoditas' })}</div>`;
   const form = k => modal(k.id ? 'Ubah komoditas' : 'Komoditas baru', `<div class="row"><label class="f">Kode<input name="kode" value="${esc(k.kode)}" placeholder="mis. BRS"></label><label class="f" style="flex:2">Nama<input name="nama" value="${esc(k.nama)}"></label></div>
-    <div class="row mt"><label class="f">Kategori<select name="kategori">${opt(['Karbohidrat', 'Protein Hewani', 'Protein Nabati', 'Sayur', 'Buah', 'Susu', 'Bumbu/Minyak', 'Lainnya'], null, null, k.kategori)}</select></label>
-    <label class="f">Satuan<select name="satuan">${opt(['kg', 'butir', 'liter', 'ikat', 'pcs', 'pack', 'karung'], null, null, k.satuan)}</select></label></div>
+    <div class="row mt"><label class="f">Kategori<select name="kategori">${opt(['Karbohidrat', 'Protein Hewani', 'Protein Nabati', 'Sayur', 'Buah', 'Susu', 'Bumbu/Minyak', 'Kebersihan', 'Perlengkapan Dapur', 'Gas/Energi', 'Lainnya'], null, null, k.kategori)}</select></label>
+    <label class="f">Satuan<select name="satuan">${opt(['kg', 'liter', 'butir', 'ikat', 'pcs', 'pack', 'botol', 'jeriken', 'dus', 'karung', 'tabung'], null, null, k.satuan)}</select></label></div>
     <div class="row mt"><label class="f">Harga beli (dari anggota)<input type="number" name="harga_beli" value="${esc(k.harga_beli)}"></label><label class="f">Harga jual (ke SPPG)<input type="number" name="harga_jual" value="${esc(k.harga_jual)}"></label>
     <label class="f">Harga acuan pasar<input type="number" name="harga_acuan" value="${esc(k.harga_acuan)}"></label></div>
-    <label class="f mt" style="max-width:200px">Aktif<select name="aktif">${opt(['YA', 'TIDAK'], null, null, k.aktif || 'YA')}</select></label>`,
+    <div class="row mt"><label class="f">Aktif<select name="aktif">${opt(['YA', 'TIDAK'], null, null, k.aktif || 'YA')}</select></label>
+    <label class="f">Kelola stok gudang<select name="kelola_stok">${opt(['TIDAK', 'YA'], null, null, k.kelola_stok || 'TIDAK')}</select></label>
+    <label class="f">Stok minimum (${esc(k.satuan || 'satuan')})<input type="number" step="0.01" name="stok_min" value="${esc(k.stok_min)}"></label></div>
+    <p class="muted" style="font-size:12.5px;margin:6px 0 0">Kelola stok = YA untuk barang yang disimpan koperasi (minyak, sabun cuci piring, gas, dll). Barang ini bisa dialokasikan dari Stok Gudang dan dipantau di menu Stok Gudang.</p>`,
     { buttons: [{ label: 'Batal' }, { label: 'Simpan', cls: 'pri', onClick: async m => { await run(() => api('saveKomoditas', { ...formData(m), id: k.id }), 'Komoditas tersimpan'); refresh(); } }] });
   if ($('#kAdd')) $('#kAdd').onclick = () => form({});
   $('#page').querySelectorAll('[data-e]').forEach(b => b.onclick = () => form(byId(S.komoditas, b.dataset.e)));
