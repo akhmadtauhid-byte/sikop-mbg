@@ -281,7 +281,7 @@ V.pesan = async () => {
   <div class="card"><div class="row"><label class="f">Cari bahan<input id="pCari" placeholder="beras, telur, ayam…"></label></div>
     <div id="katalog">${kats.map(kt => `<div class="kat" data-kat>${esc(kt)}</div>` + P.katalog.filter(k => (k.kategori || 'Lainnya') === kt).map(k => `
       <div class="prod ${num(d.items?.[k.id]) > 0 ? 'on' : ''}" data-k="${k.id}" data-nm="${esc((k.nama + ' ' + k.kode).toLowerCase())}">
-        <div class="m"><b>${esc(k.nama)}</b><small>${rp(k.harga)} / ${esc(k.satuan)}</small></div>
+        <div class="m"><b>${esc(k.nama)}</b><small>${rp(k.harga)} / ${esc(k.satuan)}${k.ready ? ' · <span class="b ok">stok siap</span>' : ''}</small></div>
         <input type="number" inputmode="decimal" min="0" step="0.5" placeholder="0" value="${num(d.items?.[k.id]) || ''}"><span class="small muted" style="width:42px">${esc(k.satuan)}</span>
       </div>`).join('')).join('') || '<div class="empty">Katalog belum tersedia. Hubungi koperasi.</div>'}</div>
   </div>
